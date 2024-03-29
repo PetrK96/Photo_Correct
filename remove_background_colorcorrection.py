@@ -12,14 +12,21 @@ def remove_bg(input_path, output_path):
             print(f'[+] Удаляю фон: "{pict}"...')
             # Удаление фона
             output = remove(Image.open(os.path.join(input_path, pict)))
-            
+
             # Увеличение контрастности
             enhancer = ImageEnhance.Contrast(output)
             output = enhancer.enhance(1.2)  # Увеличиваем контрастность в 1.2 раза
 
             # Увеличение резкости
             enhancer = ImageEnhance.Sharpness(output)
-            output = enhancer.enhance(1.7)  # Увеличиваем резкость в 1.5 раза
+            output = enhancer.enhance(1.5)  # Увеличиваем резкость в 1.5 раза
+
+            # Увеличение яркости
+            enhancer = ImageEnhance.Brightness(output)
+            output = enhancer.enhance(1.2)  # Увеличиваем яркость в 1.2 раза
+
+            # Увеличение разрешения
+            output = output.resize(desired_size, Image.LANCZOS)
 
             # Создание белого фона
             white_bg = Image.new("RGB", output.size, (255, 255, 255))
@@ -27,9 +34,6 @@ def remove_bg(input_path, output_path):
             # Установка альфа-канала
             output_with_alpha = output.convert("RGBA")
             white_bg.paste(output_with_alpha, (0, 0), output_with_alpha)
-
-            # Изменение размера до 500x500
-            white_bg.thumbnail(desired_size)
 
             # Сохранение результата
             white_bg.save(os.path.join(output_path, f'{pict.split(".")[0]}.jpg'), 'JPEG')
