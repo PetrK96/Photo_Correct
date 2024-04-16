@@ -1,12 +1,14 @@
 import os
 from rembg import remove
-from PIL import Image
+from PIL import Image, ImageEnhance
 
 desired_size = (500, 500)
 MAX_SIZE = 450
 USER_INPUT = "/Volumes/srvfsz/2.4 Сервисная служба (Общая)/Фото запчасти"
 USER_OUTPUT = '/Volumes/srvfsz/2.4 Сервисная служба (Общая)/Фото обработанные'
-
+PATH_WITHOUT_BACKROUND = '/Volumes/srvfsz/2.4 Сервисная служба (Общая)/Фото обработанные/Фото запчасти без фона'
+PATH_TO_1C = '/Volumes/srvfsz/2.4 Сервисная служба (Общая)/Фото обработанные/Фото запчасти для 1С'
+PATH_FROM_1C = '/Volumes/srvfsz/2.4 Сервисная служба (Общая)/Фото запчасти/Фото запчасти для 1С Исходные'
 def process_image(input_path, output_path):
     for pict in os.listdir(input_path):
         if pict.endswith('.png') or pict.endswith('.JPG') or pict.endswith('.CR2'):
@@ -23,6 +25,11 @@ def process_image(input_path, output_path):
             # Вырезание изображения с фона
             bbox = output.getbbox()
             output = output.crop(bbox)
+
+            # Увеличение резкости
+            enhancer = ImageEnhance.Sharpness(output)
+            output = enhancer.enhance(1.5)  # Увеличиваем резкость в 1.5 раза
+            output.save(os.path.join(PATH_WITHOUT_BACKROUND, f'{pict.split(".")[0]}.png'),'PNG')
 
             # Уменьшение размера изображения с сохранением пропорций
             width, height = output.size
@@ -51,8 +58,8 @@ def get_target_path(user_input):
     return user_input
 
 def main(user_input, user_output):
-    print("Погнали")
+    print("Стартуем")
     process_image(get_target_path(user_input), user_output)
     print('\n[+] Обработка изображений завершена!')
 
-main(USER_INPUT, USER_OUTPUT)
+main(PATH_FROM_1C, PATH_TO_1C) #меняем аргументы, меняем резулат
