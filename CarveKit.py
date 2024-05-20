@@ -34,7 +34,5 @@ class Spare_part_picture():
 
         return image_without_background_png
 
-    def create_white_background():
+    def create_white_background(self):
         white_bg = Image.new("RGBA", self.desired_size, (255, 255, 255, 255))
-
-    вуа
