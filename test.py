@@ -1,0 +1,1 @@
+from carvekit.ml.wrap.scene_classifier import SceneClassifier
