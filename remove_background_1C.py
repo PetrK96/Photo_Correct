@@ -32,6 +32,26 @@ class ImageProcessor:
                     # Удаление фона
                     output = remove(image)
 
+                    bbox = output.getbbox()
+                    output = output.crop(bbox)
+
+                    width, height, occupancy = self.analyze_image(output)
+                    # print("Заполенение = {}".format(occupancy))# Анализ размера и занятой площади изображения
+
+                    # Если изображение занимает мало места, увеличиваем его
+                    if occupancy < 0.5:
+                        self.set_max_sixe(1000)
+                    else:
+                        self.set_max_sixe(1000)
+
+                    output = self.resize_image(output)
+
+                    enhancer = ImageEnhance.Sharpness(output)
+                    output = enhancer.enhance(10)
+
+                    enhancer = ImageEnhance.Color(output)
+                    output = enhancer.enhance(2)
+
                     # Создание белого фона с альфа-каналом
                     white_bg = Image.new("RGBA", self.desired_size, (255, 255, 255, 255))
 
@@ -39,16 +59,10 @@ class ImageProcessor:
                     bbox = output.getbbox()
                     output = output.crop(bbox)
 
+                    output = self.resize_image(output)
+
                     enhancer = ImageEnhance.Sharpness(output)
                     output = enhancer.enhance(1.8)
-
-                    width, height = output.size
-                    max_dimension = max(width, height)
-                    if max_dimension > self.MAX_SIZE:
-                        scale = self.MAX_SIZE / max_dimension
-                        new_width = int(width * scale)
-                        new_height = int(height * scale)
-                        output = output.resize((new_width, new_height), Image.LANCZOS)
 
                     x_offset = (self.desired_size[0] - output.size[0]) // 2
                     y_offset = (self.desired_size[1] - output.size[1]) // 2
@@ -80,7 +94,34 @@ class ImageProcessor:
                     df = pd.DataFrame(data, columns=['Наименование файла', 'Путь'])
                     df.to_excel(writer, index=False)
 
+    def resize_image(self, image):
+        # Изменение размера изображения
+        width, height = image.size
+        max_dimension = max(width, height)
+        if max_dimension != self.get_max_size():
+            scale = self.get_max_size() / max_dimension
+            new_width = int(width * scale)
+            new_height = int(height * scale)
+            return image.resize((new_width, new_height), Image.LANCZOS)
+        else:
+            return image
 
+    def analyze_image(self, image):
+        # Анализ размера и занятой площади изображения
+        width, height = image.size
+        area = width * height
+        non_transparent_pixels = 0
+        for pixel in image.getdata():
+            if pixel[3] != 0:  # Проверка непрозрачности
+                non_transparent_pixels += 1
+        occupancy = non_transparent_pixels / area
+        return width, height, occupancy
+
+    def set_max_sixe(self, number):
+        self._MAX_SIZE_MASK = number
+
+    def get_max_size(self):
+        return self._MAX_SIZE_MASK
 
     def get_target_path(self):
         while not os.path.isdir(self.input_path):
