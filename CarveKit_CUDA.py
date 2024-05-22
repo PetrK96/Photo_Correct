@@ -29,26 +29,24 @@ def enhance_contrast(input_image_path, method='pil', contrast_factor=1.12, clip_
     return enhanced_image
 
 
-# Используем GPU для обработки
-device = 'cuda'
+def remove_background(file_path):
+    # Используем GPU для обработки
+    device = 'cuda'
 
-# Настройка компонентов с параметрами для максимального качества
-seg_net = TracerUniversalB7(device=device, batch_size=1, fp16=False)  # Точная сегментация
-fba = FBAMatting(device=device, input_tensor_size=3072, batch_size=1, fp16=False)  # Высокое разрешение
-trimap = TrimapGenerator(prob_threshold=251, kernel_size=80, erosion_iters=30)  # Настройки тримапа
+    # Настройка компонентов с параметрами для максимального качества
+    seg_net = TracerUniversalB7(device=device, batch_size=1, fp16=False)  # Точная сегментация
+    fba = FBAMatting(device=device, input_tensor_size=3072, batch_size=1, fp16=False)  # Высокое разрешение
+    trimap = TrimapGenerator(prob_threshold=253, kernel_size=55, erosion_iters=60)  # Настройки тримапа
 
 
-preprocessing = PreprocessingStub()
+    preprocessing = PreprocessingStub()
 
-postprocessing = MattingMethod(matting_module=fba, trimap_generator=trimap, device=device)
+    postprocessing = MattingMethod(matting_module=fba, trimap_generator=trimap, device=device)
 
-interface = Interface(pre_pipe=preprocessing, post_pipe=postprocessing, seg_pipe=seg_net)
+    interface = Interface(pre_pipe=preprocessing, post_pipe=postprocessing, seg_pipe=seg_net)
 
-# Загрузка и обработка изображения
-image = enhance_contrast("201-2102-2454.JPG")
-cat_wo_bg = interface([image])[0]
-cat_wo_bg.save('sample2.png')
 
-image = enhance_contrast('201-1816-0027.JPG')
-cat_wo_bg = interface([image])[0]
-cat_wo_bg.save('sample9.png')
+    image = enhance_contrast(file_path)
+    img_wo_bg = interface([image])[0]
+
+    return img_wo_bg
