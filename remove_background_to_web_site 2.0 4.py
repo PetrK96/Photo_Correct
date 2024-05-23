@@ -4,9 +4,31 @@ from PIL import Image, ImageEnhance
 import openpyxl  # Импортируем модуль для работы с Excel-файлами
 from tqdm import tqdm
 from CarveKit_CUDA import remove_background
+from CarveKit_CPU import remove_bg
+import platform
+
+def get_os():
+    system = platform.system()
+    if system == "Darwin":
+        device = "CPU"
+        input_path = "/Volumes/srvfsz/2.4 Сервисная служба (Общая)/Фото запчасти"
+        output_path = "/Volumes/srvfsz/2.4 Сервисная служба (Общая)/Фото обработанные"
+        excel_file = "/Volumes/srvfsz/2.4 Сервисная служба (Общая)/Фото обработанные/Список запчастей для ренейма.xlsx"
+        processed_images_path = "/Volumes/srvfsz/2.4 Сервисная служба (Общая)/Фото обработанные/Фото запчасти без фона"
+        original_images_path = "/Volumes/srvfsz/2.4 Сервисная служба (Общая)/Фото обработанные/Фото запчасти исходные"
+    else:
+        device = "CUDA"
+        input_path = r"\\srvfsz\Z\2.4 Сервисная служба (Общая)\Фото запчасти"  # Папка с исходными изображениями
+        output_path = r"\\srvfsz\Z\2.4 Сервисная служба (Общая)\Фото обработанные"  # Папка для сохранения обработанных изображений
+        excel_file = r"//srvfsz/Z/2.4 Сервисная служба (Общая)/Фото обработанные/Список запчастей для ренейма.xlsx"  # Путь к Excel-файлу с данными
+        processed_images_path = r"\\srvfsz\Z\2.4 Сервисная служба (Общая)\Фото обработанные\Фото запчасти без фона"  # Папка для сохранения изображений без фона
+        original_images_path = r"\\srvfsz\Z\2.4 Сервисная служба (Общая)\Фото обработанные\Фото запчасти исходные"  # Папка для сохранения исходных изображений
+
+    return input_path, output_path, excel_file, processed_images_path, original_images_path, device
+
 
 class ImageProcessor:
-    def __init__(self, input_path, output_path, excel_file, processed_images_path, original_images_path):
+    def __init__(self, input_path, output_path, excel_file, processed_images_path, original_images_path, device):
         self.input_path = input_path
         self.output_path = output_path
         self.excel_file = excel_file
@@ -15,6 +37,7 @@ class ImageProcessor:
         self.desired_size = (500, 500)
         self._MAX_SIZE_MASK = 400
         self.mapping = self.load_mapping()
+        self.device = device
 
     def load_mapping(self):
         mapping = {}
@@ -30,23 +53,31 @@ class ImageProcessor:
         dest = os.path.join(self.original_images_path, filename)
         shutil.copy2(src, dest)
 
+
+
+
     def process_images(self):
-        total_images = len(os.listdir(self.input_path))
+        total_images = len([file_name for file_name in os.listdir(self.input_path) if self.is_image(file_name)])
         processed_images = 0
+        existed_imgs = os.listdir(original_images_path)
         with tqdm(total=total_images, desc="Прогресс обработки изображений") as pbar:
             for file in os.listdir(self.input_path):
-                filename_without_ext, ext = os.path.splitext(file)
-                if filename_without_ext in self.mapping:
-                    new_filename = str(self.mapping[filename_without_ext])
-                    self.download_image(file)
-                    self.process_image(os.path.join(self.original_images_path, file), new_filename)
-                    processed_images += 1
-                    pbar.update(1)
+                if file not in existed_imgs:
+                    filename_without_ext, ext = os.path.splitext(file)
+                    if filename_without_ext in self.mapping:
+                        new_filename = str(self.mapping[filename_without_ext])
+                        self.download_image(file)
+                        self.process_image(os.path.join(self.original_images_path, file), new_filename)
+                        processed_images += 1
+                        pbar.update(1)
         print("\nОбработка завершена.")
 
     def process_image(self, file_path, new_filename):
         image = Image.open(file_path)
-        output = remove_background(file_path)
+        if self.device == "CPU":
+            output = remove_bg(file_path)
+        else:
+            output = remove_background(file_path)
         width, height, occupancy = self.analyze_image(output)
         if occupancy < 0.05:
             self.set_max_size(300)
@@ -82,6 +113,11 @@ class ImageProcessor:
         else:
             return image
 
+    def is_image(self, file_path):
+        # Проверка, является ли файл изображением по расширению
+        image_extensions = ('.jpg', '.jpeg', '.png', '.JPG', '.bmp')
+        return file_path.lower().endswith(image_extensions)
+
     def analyze_image(self, image):
         width, height = image.size
         area = width * height
@@ -102,12 +138,7 @@ class ImageProcessor:
         white_bg.paste(image_resized, (x_offset, y_offset), image_resized)
         return white_bg
 
-# Основная функция программы
-input_path = r"\\srvfsz\Z\2.4 Сервисная служба (Общая)\Фото запчасти"  # Папка с исходными изображениями
-output_path = r"\\srvfsz\Z\2.4 Сервисная служба (Общая)\Фото обработанные"  # Папка для сохранения обработанных изображений
-excel_file = r"//srvfsz/Z/2.4 Сервисная служба (Общая)/Фото обработанные/Список запчастей для ренейма.xlsx"  # Путь к Excel-файлу с данными
-processed_images_path = r"\\srvfsz\Z\2.4 Сервисная служба (Общая)\Фото обработанные\Фото запчасти без фона"  # Папка для сохранения изображений без фона
-original_images_path = r"\\srvfsz\Z\2.4 Сервисная служба (Общая)\Фото обработанные\Фото запчасти исходные"  # Папка для сохранения исходных изображений
+input_path, output_path, excel_file, processed_images_path, original_images_path, device = get_os()
 
-processor = ImageProcessor(input_path, output_path, excel_file, processed_images_path, original_images_path)
+processor = ImageProcessor(input_path, output_path, excel_file, processed_images_path, original_images_path, device)
 processor.process_images()

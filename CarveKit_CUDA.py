@@ -36,7 +36,7 @@ def remove_background(file_path):
     # Настройка компонентов с параметрами для максимального качества
     seg_net = TracerUniversalB7(device=device, batch_size=1, fp16=False)  # Точная сегментация
     fba = FBAMatting(device=device, input_tensor_size=3072, batch_size=1, fp16=False)  # Высокое разрешение
-    trimap = TrimapGenerator(prob_threshold=253, kernel_size=55, erosion_iters=60)  # Настройки тримапа
+    trimap = TrimapGenerator(prob_threshold=240, kernel_size=55, erosion_iters=30)  # Настройки тримапа
 
 
     preprocessing = PreprocessingStub()
