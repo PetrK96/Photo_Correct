@@ -20,7 +20,7 @@ def get_os():
         device = "CUDA"
         input_path = r"\\srvfsz\Z\2.4 Сервисная служба (Общая)\Фото запчасти"  # Папка с исходными изображениями
         output_path = r"\\srvfsz\Z\2.4 Сервисная служба (Общая)\Фото обработанные"  # Папка для сохранения обработанных изображений
-        excel_file = r"//srvfsz/Z/2.4 Сервисная служба (Общая)/Фото обработанные/Список запчастей для ренейма.xlsx"  # Путь к Excel-файлу с данными
+        excel_file = r"\\srvfsz\Z\2.4 Сервисная служба (Общая)\Фото обработанные\Список запчастей для ренейма.xlsx"   # Путь к Excel-файлу с данными
         processed_images_path = r"\\srvfsz\Z\2.4 Сервисная служба (Общая)\Фото обработанные\Фото запчасти без фона"  # Папка для сохранения изображений без фона
         original_images_path = r"\\srvfsz\Z\2.4 Сервисная служба (Общая)\Фото обработанные\Фото запчасти исходные"  # Папка для сохранения исходных изображений
 
@@ -53,23 +53,32 @@ class ImageProcessor:
         dest = os.path.join(self.original_images_path, filename)
         shutil.copy2(src, dest)
 
+    def is_exist(self, file_name, list):
+        return file_name not in list
+
 
 
 
     def process_images(self):
-        total_images = len([file_name for file_name in os.listdir(self.input_path) if self.is_image(file_name)])
-        processed_images = 0
         existed_imgs = os.listdir(original_images_path)
+        total_images = len([file_name for file_name in os.listdir(self.input_path) if (self.is_image_exist(file_name, list=existed_imgs))])
+        processed_images = 0
         with tqdm(total=total_images, desc="Прогресс обработки изображений") as pbar:
             for file in os.listdir(self.input_path):
-                if file not in existed_imgs:
-                    filename_without_ext, ext = os.path.splitext(file)
-                    if filename_without_ext in self.mapping:
-                        new_filename = str(self.mapping[filename_without_ext])
-                        self.download_image(file)
-                        self.process_image(os.path.join(self.original_images_path, file), new_filename)
-                        processed_images += 1
-                        pbar.update(1)
+                if self.is_image(file):
+                    if file not in existed_imgs:
+                        filename_without_ext, ext = os.path.splitext(file)
+                        if filename_without_ext in self.mapping:
+                            new_filename = str(self.mapping[filename_without_ext])
+                            self.download_image(file)
+                            self.process_image(os.path.join(self.original_images_path, file), new_filename)
+                            processed_images += 1
+                            pbar.update(1)
+                        else:
+                            self.download_image(file)
+                            self.process_image(os.path.join(self.original_images_path, file), filename_without_ext)
+                            processed_images += 1
+                            pbar.update(1)
         print("\nОбработка завершена.")
 
     def process_image(self, file_path, new_filename):
@@ -84,7 +93,7 @@ class ImageProcessor:
         else:
             self.set_max_size(450)
         enhancer = ImageEnhance.Sharpness(output)
-        output = enhancer.enhance(20)
+        output = enhancer.enhance(2)
         enhancer = ImageEnhance.Color(output)
         output = enhancer.enhance(2)
         processed_image_path = os.path.join(self.processed_images_path, f'{new_filename}.png')
@@ -113,10 +122,17 @@ class ImageProcessor:
         else:
             return image
 
-    def is_image(self, file_path):
+    def is_image_exist(self, file_path, list):
         # Проверка, является ли файл изображением по расширению
         image_extensions = ('.jpg', '.jpeg', '.png', '.JPG', '.bmp')
+        return file_path not in list and file_path.lower().endswith(image_extensions)
+
+    def is_image(self, file_path):
+        image_extensions = ('.jpg', '.jpeg', '.png', '.JPG', '.bmp')
         return file_path.lower().endswith(image_extensions)
+
+
+
 
     def analyze_image(self, image):
         width, height = image.size
@@ -140,5 +156,5 @@ class ImageProcessor:
 
 input_path, output_path, excel_file, processed_images_path, original_images_path, device = get_os()
 
-processor = ImageProcessor(input_path, output_path, excel_file, processed_images_path, original_images_path, device)
+processor = ImageProcessor(input_path, output_path, excel_file, processed_images_path, original_images_path, device="CUDA")
 processor.process_images()
