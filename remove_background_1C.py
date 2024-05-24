@@ -72,7 +72,7 @@ class ImageProcessor:
                     white_bg = white_bg.convert("RGB")
 
                     # Сохранение результата в формате JPEG
-                    output_filename = f'{pict.split(".j")[0]}.jpg'
+                    output_filename = os.path.splitext(pict)
                     output_filepath = os.path.join(self.output_path, output_filename)
                     white_bg.save(output_filepath, 'JPEG')
 
