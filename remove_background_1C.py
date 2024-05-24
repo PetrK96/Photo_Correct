@@ -72,16 +72,15 @@ class ImageProcessor:
                     white_bg = white_bg.convert("RGB")
 
                     # Сохранение результата в формате JPEG
-                    output_filename = os.path.splitext(pict)
+                    output_filename, _ = os.path.splitext(pict)
                     output_filepath = os.path.join(self.output_path, output_filename)
-                    white_bg.save(output_filepath, 'JPEG')
+                    white_bg.save(output_filepath+".jpg", 'JPEG')
 
                     # Добавление информации об обработанном изображении в Excel
-                    filename_without_extension = pict[:-8]
                     #print(filename_without_extension)
                     path_for_excel = output_filepath.replace("/", "\\")  # Замена символов "/" на "\"
                     path_for_excel = path_for_excel.split("\\srvfsz\\")[1]  # Удаление части пути до папки "srvfsz" и пробелов
-                    data.append([filename_without_extension, f'Z:\\{path_for_excel}'])
+                    data.append([output_filename, f'Z:\\{path_for_excel}'])
 
                     processed_images += 1
                     pbar.update(1)
